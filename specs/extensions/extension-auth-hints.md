@@ -324,11 +324,11 @@ Content-Type: application/json
 
 #### Step 3 — Client Registers via DCR
 
-The client chooses `accepts[1]` (deferred), sees the auth requirement, and registers with the authorization server via Dynamic Client Registration (RFC 7591). This is a one-time step — the client reuses the `client_id` for subsequent token requests. See RFC 7591 for the registration request and response format.
+The client chooses `accepts[1]` (deferred), sees the auth requirement, and registers with the authorization server via Dynamic Client Registration (RFC 7591), including a client authentication method the authorization server accepts (for example `private_key_jwt` with a `jwks`), since the client credentials grant in Step 4 is only available to confidential clients (RFC 6749 §4.4). This is a one-time step — the client reuses the `client_id` for subsequent token requests. See RFC 7591 for the registration request and response format.
 
 #### Step 4 — Client Obtains DPoP-Bound Access Token
 
-Using the `client_id` from registration, the client requests an access token from the token endpoint (RFC 6749 §4.4). The client generates a DPoP key pair and includes a DPoP proof JWT per RFC 9449. See the respective RFCs for the token request and response format.
+Using the `client_id` and authentication method from registration, the client requests an access token from the token endpoint (RFC 6749 §4.4). The client generates a DPoP key pair and includes a DPoP proof JWT per RFC 9449. See the respective RFCs for the token request and response format.
 
 #### Step 5 — Client Submits Payment with Authentication
 
