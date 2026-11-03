@@ -47,6 +47,8 @@ import {
   verifyReceiptSignatureJWS,
   extractPublicKeyFromKid,
   OFFER_RECEIPT,
+  OFFER_JWS_TYP,
+  RECEIPT_JWS_TYP,
   type JWSSigner,
   type OfferPayload,
   type ReceiptPayload,
@@ -268,6 +270,38 @@ describe("x402 Offer/Receipt Extension", () => {
       );
       expect(header.alg).toBe("ES256K");
       expect(header.kid).toBe(expectedKid);
+    });
+
+    it("JWS typ separates offers from receipts", async () => {
+      const keyPair = await generateES256KKeyPair();
+      const signer = await createES256KSigner(keyPair.privateKey, "did:web:api.example.com#key-1");
+      const input = {
+        network: "eip155:8453",
+        resourceUrl: "https://api.example.com/r",
+        payer: "0x1",
+      };
+      const offer = await createOfferJWS(
+        input.resourceUrl,
+        { ...input, acceptIndex: 0, scheme: "exact", asset: "native", payTo: "0x2", amount: "1" },
+        signer,
+      );
+      const receipt = await createReceiptJWS(input, signer);
+
+      expect(extractJWSHeader(offer.signature).typ).toBe(OFFER_JWS_TYP);
+      expect(extractJWSHeader(receipt.signature).typ).toBe(RECEIPT_JWS_TYP);
+      await expect(
+        verifyReceiptSignatureJWS({ format: "jws", signature: offer.signature }, keyPair.publicKey),
+      ).rejects.toThrow('Unexpected JWS typ "x402-offer+jws"');
+      await expect(
+        verifyOfferSignatureJWS({ ...offer, signature: receipt.signature }, keyPair.publicKey),
+      ).rejects.toThrow('Unexpected JWS typ "x402-receipt+jws"');
+
+      const legacy = await createJWS({ ...input, version: 1, issuedAt: 1 }, signer);
+      const payload = await verifyReceiptSignatureJWS(
+        { format: "jws", signature: legacy },
+        keyPair.publicKey,
+      );
+      expect(payload.payer).toBe("0x1");
     });
   });
 

@@ -55,6 +55,9 @@ export {
   extractEIP155ChainId,
   convertNetworkStringToCAIP2,
   extractChainIdFromCAIP2,
+  // JWS typ header values
+  OFFER_JWS_TYP,
+  RECEIPT_JWS_TYP,
   // Offer creation
   createOfferJWS,
   createOfferEIP712,

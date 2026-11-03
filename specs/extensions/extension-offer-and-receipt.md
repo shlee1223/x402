@@ -102,7 +102,10 @@ For JWS format, the header MUST include:
 | Field | Type   | Required | Description                                 |
 | ----- | ------ | -------- | ------------------------------------------- |
 | `alg` | string | Yes      | Signing algorithm (e.g., `ES256K`, `EdDSA`) |
+| `typ` | string | Yes      | `x402-offer+jws` for offers, `x402-receipt+jws` for receipts |
 | `kid` | string | Yes      | Key identifier (DID URL) for key lookup     |
+
+`typ` separates offers from receipts at the signature layer, as `primaryType` does for EIP-712 (§3.2.1); see [RFC 8725 §3.11](https://www.rfc-editor.org/rfc/rfc8725#section-3.11). Verifiers MUST reject a JWS whose `typ` is present and does not match the artifact being verified.
 
 
 **4. Signed Offer**
@@ -211,7 +214,7 @@ For the optional `validUntil` field, implementations MUST set unused fields to `
 {
   "format": "jws",
   "acceptIndex": 0,
-  "signature": "eyJhbGciOiJFUzI1NksiLCJraWQiOiJkaWQ6d2ViOmFwaS5leGFtcGxlLmNvbSNrZXktMSJ9.eyJ2ZXJzaW9uIjoxLCJyZXNvdXJjZVVybCI6Imh0dHBzOi8vYXBpLmV4YW1wbGUuY29tL3ByZW1pdW0tZGF0YSIsInNjaGVtZSI6ImV4YWN0IiwibmV0d29yayI6ImVpcDE1NTo4NDUzIiwiYXNzZXQiOiIweDgzMzU4OWZDRDZlRGI2RTA4ZjRjN0MzMkQ0ZjcxYjU0YmRBMDI5MTMiLCJwYXlUbyI6IjB4MjA5NjkzQmM2YWZjMEM1MzI4YkEzNkZhRjAzQzUxNEVGMzEyMjg3QyIsImFtb3VudCI6IjEwMDAwIiwidmFsaWRVbnRpbCI6MTcwMzEyMzUxNn0.sig"
+  "signature": "eyJhbGciOiJFUzI1NksiLCJ0eXAiOiJ4NDAyLW9mZmVyK2p3cyIsImtpZCI6ImRpZDp3ZWI6YXBpLmV4YW1wbGUuY29tI2tleS0xIn0.eyJ2ZXJzaW9uIjoxLCJyZXNvdXJjZVVybCI6Imh0dHBzOi8vYXBpLmV4YW1wbGUuY29tL3ByZW1pdW0tZGF0YSIsInNjaGVtZSI6ImV4YWN0IiwibmV0d29yayI6ImVpcDE1NTo4NDUzIiwiYXNzZXQiOiIweDgzMzU4OWZDRDZlRGI2RTA4ZjRjN0MzMkQ0ZjcxYjU0YmRBMDI5MTMiLCJwYXlUbyI6IjB4MjA5NjkzQmM2YWZjMEM1MzI4YkEzNkZhRjAzQzUxNEVGMzEyMjg3QyIsImFtb3VudCI6IjEwMDAwIiwidmFsaWRVbnRpbCI6MTcwMzEyMzUxNn0.sig"
 }
 ```
 
@@ -226,7 +229,7 @@ For the optional `validUntil` field, implementations MUST set unused fields to `
 
 **For JWS:**
 1. Parse the JWS compact string from `offer.signature`
-2. Extract `kid` from the JWS header; extract the payload by base64url-decoding the JWS payload component
+2. Confirm the `typ` header is `x402-offer+jws`; extract `kid` from the JWS header; extract the payload by base64url-decoding the JWS payload component
 3. Check the payload's `version` to determine how to interpret the remaining fields (currently only version `1` is defined)
 4. Resolve `kid` to a public key
 5. Verify the JWS signature over the complete payload
@@ -359,7 +362,7 @@ For the optional `transaction` field, implementations MUST set unused fields to 
 ```json
 {
   "format": "jws",
-  "signature": "eyJhbGciOiJFUzI1NksiLCJraWQiOiJkaWQ6d2ViOmFwaS5leGFtcGxlLmNvbSNrZXktMSJ9.eyJ2ZXJzaW9uIjoxLCJuZXR3b3JrIjoiZWlwMTU1Ojg0NTMiLCJyZXNvdXJjZVVybCI6Imh0dHBzOi8vYXBpLmV4YW1wbGUuY29tL3ByZW1pdW0tZGF0YSIsInBheWVyIjoiMHg4NTdiMDY1MTlFOTFlM0E1NDUzOGI5MWJEYmIwRTIyMzczZTM2YjY2IiwiaXNzdWVkQXQiOjE3MDMxMjM0NTZ9.sig"
+  "signature": "eyJhbGciOiJFUzI1NksiLCJ0eXAiOiJ4NDAyLXJlY2VpcHQrandzIiwia2lkIjoiZGlkOndlYjphcGkuZXhhbXBsZS5jb20ja2V5LTEifQ.eyJ2ZXJzaW9uIjoxLCJuZXR3b3JrIjoiZWlwMTU1Ojg0NTMiLCJyZXNvdXJjZVVybCI6Imh0dHBzOi8vYXBpLmV4YW1wbGUuY29tL3ByZW1pdW0tZGF0YSIsInBheWVyIjoiMHg4NTdiMDY1MTlFOTFlM0E1NDUzOGI5MWJEYmIwRTIyMzczZTM2YjY2IiwiaXNzdWVkQXQiOjE3MDMxMjM0NTZ9.sig"
 }
 ```
 
@@ -376,7 +379,7 @@ For the optional `transaction` field, implementations MUST set unused fields to 
 
 **For JWS:**
 1. Parse the JWS compact string from `receipt.signature`
-2. Extract `kid` from the JWS header; extract the payload by base64url-decoding the JWS payload component
+2. Confirm the `typ` header is `x402-receipt+jws`; extract `kid` from the JWS header; extract the payload by base64url-decoding the JWS payload component
 3. Check the payload's `version` to determine how to interpret the remaining fields (currently only version `1` is defined)
 4. Resolve `kid` to a public key
 5. Verify the JWS signature over the complete payload
@@ -576,7 +579,7 @@ Note: x402 v1 uses human-readable network identifiers (e.g., "base") in the prot
           {
             "format": "jws",
             "acceptIndex": 0,
-            "signature": "eyJhbGciOiJFUzI1NksiLCJraWQiOiJkaWQ6d2ViOmFwaS5leGFtcGxlLmNvbSNrZXktMSJ9.eyJ2ZXJzaW9uIjoxLCJyZXNvdXJjZVVybCI6Imh0dHBzOi8vYXBpLmV4YW1wbGUuY29tL3ByZW1pdW0tZGF0YSIsInNjaGVtZSI6ImV4YWN0IiwibmV0d29yayI6ImVpcDE1NTo4NDUzIiwiYXNzZXQiOiIweDgzMzU4OWZDRDZlRGI2RTA4ZjRjN0MzMkQ0ZjcxYjU0YmRBMDI5MTMiLCJwYXlUbyI6IjB4MjA5NjkzQmM2YWZjMEM1MzI4YkEzNkZhRjAzQzUxNEVGMzEyMjg3QyIsImFtb3VudCI6IjEwMDAwIiwidmFsaWRVbnRpbCI6MTcwMzEyMzUxNn0.sig"
+            "signature": "eyJhbGciOiJFUzI1NksiLCJ0eXAiOiJ4NDAyLW9mZmVyK2p3cyIsImtpZCI6ImRpZDp3ZWI6YXBpLmV4YW1wbGUuY29tI2tleS0xIn0.eyJ2ZXJzaW9uIjoxLCJyZXNvdXJjZVVybCI6Imh0dHBzOi8vYXBpLmV4YW1wbGUuY29tL3ByZW1pdW0tZGF0YSIsInNjaGVtZSI6ImV4YWN0IiwibmV0d29yayI6ImVpcDE1NTo4NDUzIiwiYXNzZXQiOiIweDgzMzU4OWZDRDZlRGI2RTA4ZjRjN0MzMkQ0ZjcxYjU0YmRBMDI5MTMiLCJwYXlUbyI6IjB4MjA5NjkzQmM2YWZjMEM1MzI4YkEzNkZhRjAzQzUxNEVGMzEyMjg3QyIsImFtb3VudCI6IjEwMDAwIiwidmFsaWRVbnRpbCI6MTcwMzEyMzUxNn0.sig"
           }
         ]
       },
@@ -629,7 +632,7 @@ Note: x402 v1 uses human-readable network identifiers (e.g., "base") in the prot
           {
             "format": "jws",
             "acceptIndex": 0,
-            "signature": "eyJhbGciOiJFUzI1NksiLCJraWQiOiJkaWQ6d2ViOmFwaS5leGFtcGxlLmNvbSNrZXktMSJ9.eyJ2ZXJzaW9uIjoxLCJyZXNvdXJjZVVybCI6Imh0dHBzOi8vYXBpLmV4YW1wbGUuY29tL3ByZW1pdW0tZGF0YSIsInNjaGVtZSI6ImV4YWN0IiwibmV0d29yayI6ImVpcDE1NTo4NDUzIiwiYXNzZXQiOiIweDgzMzU4OWZDRDZlRGI2RTA4ZjRjN0MzMkQ0ZjcxYjU0YmRBMDI5MTMiLCJwYXlUbyI6IjB4MjA5NjkzQmM2YWZjMEM1MzI4YkEzNkZhRjAzQzUxNEVGMzEyMjg3QyIsImFtb3VudCI6IjEwMDAwIiwidmFsaWRVbnRpbCI6MTcwMzEyMzUxNn0.sig"
+            "signature": "eyJhbGciOiJFUzI1NksiLCJ0eXAiOiJ4NDAyLW9mZmVyK2p3cyIsImtpZCI6ImRpZDp3ZWI6YXBpLmV4YW1wbGUuY29tI2tleS0xIn0.eyJ2ZXJzaW9uIjoxLCJyZXNvdXJjZVVybCI6Imh0dHBzOi8vYXBpLmV4YW1wbGUuY29tL3ByZW1pdW0tZGF0YSIsInNjaGVtZSI6ImV4YWN0IiwibmV0d29yayI6ImVpcDE1NTo4NDUzIiwiYXNzZXQiOiIweDgzMzU4OWZDRDZlRGI2RTA4ZjRjN0MzMkQ0ZjcxYjU0YmRBMDI5MTMiLCJwYXlUbyI6IjB4MjA5NjkzQmM2YWZjMEM1MzI4YkEzNkZhRjAzQzUxNEVGMzEyMjg3QyIsImFtb3VudCI6IjEwMDAwIiwidmFsaWRVbnRpbCI6MTcwMzEyMzUxNn0.sig"
           }
         ]
       },
@@ -782,7 +785,7 @@ Note: x402 v1 uses human-readable network identifiers (e.g., "base") in the prot
       "info": {
         "receipt": {
           "format": "jws",
-          "signature": "eyJhbGciOiJFUzI1NksiLCJraWQiOiJkaWQ6d2ViOmFwaS5leGFtcGxlLmNvbSNrZXktMSJ9.eyJ2ZXJzaW9uIjoxLCJuZXR3b3JrIjoiZWlwMTU1Ojg0NTMiLCJyZXNvdXJjZVVybCI6Imh0dHBzOi8vYXBpLmV4YW1wbGUuY29tL3ByZW1pdW0tZGF0YSIsInBheWVyIjoiMHg4NTdiMDY1MTlFOTFlM0E1NDUzOGI5MWJEYmIwRTIyMzczZTM2YjY2IiwiaXNzdWVkQXQiOjE3MDMxMjM0NTYsInRyYW5zYWN0aW9uIjoiIn0.sig"
+          "signature": "eyJhbGciOiJFUzI1NksiLCJ0eXAiOiJ4NDAyLXJlY2VpcHQrandzIiwia2lkIjoiZGlkOndlYjphcGkuZXhhbXBsZS5jb20ja2V5LTEifQ.eyJ2ZXJzaW9uIjoxLCJuZXR3b3JrIjoiZWlwMTU1Ojg0NTMiLCJyZXNvdXJjZVVybCI6Imh0dHBzOi8vYXBpLmV4YW1wbGUuY29tL3ByZW1pdW0tZGF0YSIsInBheWVyIjoiMHg4NTdiMDY1MTlFOTFlM0E1NDUzOGI5MWJEYmIwRTIyMzczZTM2YjY2IiwiaXNzdWVkQXQiOjE3MDMxMjM0NTYsInRyYW5zYWN0aW9uIjoiIn0.sig"
         }
       },
       "schema": {
@@ -818,7 +821,7 @@ Note: x402 v1 uses human-readable network identifiers (e.g., "base") in the prot
       "info": {
         "receipt": {
           "format": "jws",
-          "signature": "eyJhbGciOiJFUzI1NksiLCJraWQiOiJkaWQ6d2ViOmFwaS5leGFtcGxlLmNvbSNrZXktMSJ9.eyJ2ZXJzaW9uIjoxLCJuZXR3b3JrIjoiZWlwMTU1Ojg0NTMiLCJyZXNvdXJjZVVybCI6Imh0dHBzOi8vYXBpLmV4YW1wbGUuY29tL3ByZW1pdW0tZGF0YSIsInBheWVyIjoiMHg4NTdiMDY1MTlFOTFlM0E1NDUzOGI5MWJEYmIwRTIyMzczZTM2YjY2IiwiaXNzdWVkQXQiOjE3MDMxMjM0NTYsInRyYW5zYWN0aW9uIjoiIn0.sig"
+          "signature": "eyJhbGciOiJFUzI1NksiLCJ0eXAiOiJ4NDAyLXJlY2VpcHQrandzIiwia2lkIjoiZGlkOndlYjphcGkuZXhhbXBsZS5jb20ja2V5LTEifQ.eyJ2ZXJzaW9uIjoxLCJuZXR3b3JrIjoiZWlwMTU1Ojg0NTMiLCJyZXNvdXJjZVVybCI6Imh0dHBzOi8vYXBpLmV4YW1wbGUuY29tL3ByZW1pdW0tZGF0YSIsInBheWVyIjoiMHg4NTdiMDY1MTlFOTFlM0E1NDUzOGI5MWJEYmIwRTIyMzczZTM2YjY2IiwiaXNzdWVkQXQiOjE3MDMxMjM0NTYsInRyYW5zYWN0aW9uIjoiIn0.sig"
         }
       },
       "schema": {

@@ -193,6 +193,12 @@ export function getCanonicalBytes(obj: unknown): Uint8Array {
 // JWS Signing (§3.3)
 // ============================================================================
 
+/** JWS `typ` header value for signed offers (§3.3) */
+export const OFFER_JWS_TYP = "x402-offer+jws";
+
+/** JWS `typ` header value for signed receipts (§3.3) */
+export const RECEIPT_JWS_TYP = "x402-receipt+jws";
+
 /**
  * Create a JWS Compact Serialization from a payload
  *
@@ -202,10 +208,15 @@ export function getCanonicalBytes(obj: unknown): Uint8Array {
  *
  * @param payload - The payload object to sign
  * @param signer - The JWS signer
+ * @param typ - Optional `typ` header value (§3.3)
  * @returns The JWS compact serialization string
  */
-export async function createJWS<T extends object>(payload: T, signer: JWSSigner): Promise<string> {
-  const headerObj = { alg: signer.algorithm, kid: signer.kid };
+export async function createJWS<T extends object>(
+  payload: T,
+  signer: JWSSigner,
+  typ?: string,
+): Promise<string> {
+  const headerObj = { alg: signer.algorithm, ...(typ && { typ }), kid: signer.kid };
   const headerB64 = jose.base64url.encode(new TextEncoder().encode(JSON.stringify(headerObj)));
   const canonical = canonicalize(payload);
   const payloadB64 = jose.base64url.encode(new TextEncoder().encode(canonical));
@@ -220,7 +231,7 @@ export async function createJWS<T extends object>(payload: T, signer: JWSSigner)
  * @param jws - The JWS compact serialization string
  * @returns The decoded header object
  */
-export function extractJWSHeader(jws: string): { alg: string; kid?: string } {
+export function extractJWSHeader(jws: string): { alg: string; typ?: string; kid?: string } {
   const parts = jws.split(".");
   if (parts.length !== 3) throw new Error("Invalid JWS format");
   const headerJson = jose.base64url.decode(parts[0]);
@@ -586,7 +597,7 @@ export async function createOfferJWS(
   signer: JWSSigner,
 ): Promise<JWSSignedOffer> {
   const payload = createOfferPayload(resourceUrl, input);
-  const jws = await createJWS(payload, signer);
+  const jws = await createJWS(payload, signer, OFFER_JWS_TYP);
   return {
     format: "jws",
     acceptIndex: input.acceptIndex,
@@ -698,7 +709,7 @@ export async function createReceiptJWS(
   signer: JWSSigner,
 ): Promise<JWSSignedReceipt> {
   const payload = createReceiptPayloadForJWS(input);
-  const jws = await createJWS(payload, signer);
+  const jws = await createJWS(payload, signer, RECEIPT_JWS_TYP);
   return { format: "jws", signature: jws };
 }
 
@@ -823,7 +834,8 @@ export async function verifyOfferSignatureJWS(
     throw new Error(`Expected jws format, got ${offer.format}`);
   }
   const key = await resolveVerificationKey(offer.signature, publicKey);
-  const { payload } = await jose.compactVerify(offer.signature, key);
+  const { payload, protectedHeader } = await jose.compactVerify(offer.signature, key);
+  assertJWSTyp(protectedHeader.typ, OFFER_JWS_TYP);
   return JSON.parse(new TextDecoder().decode(payload)) as OfferPayload;
 }
 
@@ -844,8 +856,22 @@ export async function verifyReceiptSignatureJWS(
     throw new Error(`Expected jws format, got ${receipt.format}`);
   }
   const key = await resolveVerificationKey(receipt.signature, publicKey);
-  const { payload } = await jose.compactVerify(receipt.signature, key);
+  const { payload, protectedHeader } = await jose.compactVerify(receipt.signature, key);
+  assertJWSTyp(protectedHeader.typ, RECEIPT_JWS_TYP);
   return JSON.parse(new TextDecoder().decode(payload)) as ReceiptPayload;
+}
+
+/**
+ * Reject a JWS whose `typ` names another artifact type (§3.3). A missing `typ`
+ * is accepted for artifacts issued before `typ` was required.
+ *
+ * @param actual - The `typ` header of the verified JWS, if any
+ * @param expected - The `typ` for the artifact being verified
+ */
+function assertJWSTyp(actual: string | undefined, expected: string): void {
+  if (actual !== undefined && actual !== expected) {
+    throw new Error(`Unexpected JWS typ "${actual}", expected "${expected}"`);
+  }
 }
 
 /**
